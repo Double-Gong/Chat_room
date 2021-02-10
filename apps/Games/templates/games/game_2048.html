@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>2048</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='semantic-ui/semantic.min.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='dog.png') }}">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="//code.z01.com/v4/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//code.z01.com/v4/dist/css/zico.min.css">
+
+    <style>
+        .box-shadow {
+            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, .05);
+        }
+
+        #game-area {
+            height: 300px;
+            width: 300px;
+            cursor: none;
+            margin: 10px;
+        }
+        #game-table{
+            border-collapse:collapse;
+        }
+
+        #game-table td {
+            vertical-align: middle;
+            text-align: center;
+            height: 25%;
+            width: 25%;
+            border-style: solid;
+            border-color: SlateGray;
+            border-width: 5px;
+            background: red;
+        }
+
+        #game-table td[value='2'] {
+            background: PapayaWhip;
+        }
+
+        #game-table td[value='4'] {
+            background: BlanchedAlmond;
+        }
+
+        #game-table td[value='8'] {
+            background: MistyRose;
+        }
+
+        #game-table td[value='16'] {
+            background: Bisque;
+        }
+
+        #game-table td[value='32'] {
+            background: Moccasin;
+        }
+
+        #game-table td[value='64'] {
+            background: NavajoWhite;
+        }
+
+        #game-table td[value='128'] {
+            background: PeachPuff;
+        }
+
+        #game-table td[value='256'] {
+            background: Pink;
+        }
+
+        #game-table td[value='512'] {
+            background: LightSalmon;
+        }
+
+        #game-table td[value='1024'] {
+            background: Orange;
+        }
+
+        #game-table td[value='2048'] {
+            background: Gold;
+        }
+
+        #game-table td[value='4096'] {
+            background: Tomato;
+        }
+
+        #game-table td[value='8192'] {
+            background: OrangeRed;
+        }
+
+        #game-table td[value='0'] {
+            background: white;
+        }
+    </style>
+</head>
+<body>
+
+<!--头-->
+<div class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom box-shadow">
+    <img src="{{ url_for('static', filename='dog.png') }}" width="50px" height="50px">
+    <h5 class=" ml-4 my-0 mr-md-4 font-weight-normal">每一次人生都会是一次尝试，这次又会怎样呢？</h5>
+    <div class="ml-auto my-0 mr-md-auto">
+    </div>
+    <nav class="my-2 my-md-0 mr-md-3">
+        <a class="p-2 text-dark" href="/">
+            {% if current_user.is_authenticated %}
+                Hi {{ current_user.username }}!
+            {% endif %}
+        </a>
+    </nav>
+    <a class="btn btn-outline-primary" href="{{ url_for('auth.logout') }}">logout</a>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="ml-auto mr-auto">
+            <h2 style="display: inline-block;color: #aac109">score:&nbsp;</h2><h3 id="score" style="display: inline-block;color: #995a31"></h3>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="ml-auto mr-auto" id="game-area">
+            <table class="ui striped table" id="game-table" style="height: 100%;width: 100%;">
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+    <div class="row mt-3">
+        <div class="ml-auto mr-auto">
+            <button class="btn btn-primary" id="btn_start" onclick="game_start()">开始游戏</button>
+            <button class="btn btn-danger" id="btn_over" style="display: none" onclick="game_stop()">结束游戏</button>
+        </div>
+    </div>
+
+</div>
+
+
+</body>
+</html>
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+<script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+<script type="text/javascript">
+    function init_table() {
+        $('tbody').html('')
+        for (let i = 0; i < 4; i++) {
+            var content = '<tr>'
+            for (var j = 0; j < 4; j++) {
+                content += '<td value="0"></td>'
+            }
+            $('tbody').append(content + '</tr>')
+        }
+        $('#score').html('')
+    }
+
+    init_table()
+
+    socket = io('/game2048')
+    socket.on('receive_data', (data) => {
+        var game_data = JSON.parse(data.game_data)
+        var content = ''
+        for (let i in game_data) {
+            content += '<tr>'
+            for (let j in game_data[i]) {
+                content += '<td value="' + game_data[i][j] + '">' + game_data[i][j] + '</td>'
+            }
+            content += '</tr>'
+        }
+        $('tbody').html(content + '</tr>')
+        $('#score').html(data.game_score)
+    })
+
+    socket.on('disconnect', (reason) => {
+        console.log(reason)
+        clear_table()
+        init_table()
+    })
+
+    socket.on('game_over', () => {
+        console.log('游戏结束')
+        clear_table()
+        alert('游戏结束！')
+    })
+
+    function Keytest(event) {
+        switch (event.key) {
+            case 'Escape':
+                game_stop()
+                break
+            case 'ArrowDown':
+                socket.emit('down')
+                break
+            case 'ArrowUp':
+                socket.emit('up')
+                break
+            case 'ArrowLeft':
+                socket.emit('left')
+                break
+            case 'ArrowRight':
+                socket.emit('right')
+                break
+        }
+    }
+
+
+    function game_start() {
+        console.log('i am coming')
+        init_table()
+        $('#btn_over').show()
+        $('#btn_start').hide()
+        socket.emit('start')
+        $('body').attr('onkeyup', "Keytest(event)")
+    }
+    function clear_table() {
+        $('body').removeAttr('onkeyup')
+        $('#btn_start').show()
+        $('#btn_over').hide()
+    }
+    function game_stop() {
+        clear_table()
+        socket.emit('over')
+        init_table()
+    }
+</script>

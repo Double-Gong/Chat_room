@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>首页</title>
+    <link rel="icon" href="{{ url_for('static', filename='dog.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='semantic-ui/semantic.min.css') }}">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    {#    <link rel="stylesheet" href="//code.z01.com/v4/dist/css/bootstrap.min.css">#}
+    {#    <link rel="stylesheet" href="//code.z01.com/v4/dist/css/zico.min.css">#}
+    <style>
+        .box-shadow {
+            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, .05);
+        }
+    </style>
+
+</head>
+<body>
+
+<!--头-->
+<div class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom box-shadow">
+    <img src="{{ url_for('static', filename='dog.png') }}" width="50px" height="50px">
+    <h5 class=" ml-4 my-0 mr-md-4 font-weight-normal">每一次人生都会是一次尝试，这次又会怎样呢？</h5>
+    <div class="ml-4 my-0 mr-md-auto">
+    </div>
+    <nav class="my-2 my-md-0 mr-md-3">
+        <a class="p-2 text-dark" href="/">
+            {% if current_user.is_authenticated %}
+                Hi {{ current_user.username }}!
+            {% endif %}
+        </a>
+    </nav>
+    <a class="btn btn-outline-primary" href="{{ url_for('auth.logout') }}">logout</a>
+</div>
+<div class="container" style="height: 80%">
+    <div class="row" style="height: 80%">
+    <div class="ml-auto mr-auto my-auto">
+        <div class="massive ui buttons" id="btn-choice">
+            <button class="ui positive button" value="chat" onclick="select_chat()">聊天</button>
+            <div class="or"></div>
+            <button class="ui positive button" value="game" onclick="select_game()">游戏</button>
+        </div>
+    </div>
+    </div>
+
+</div>
+
+
+
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+<script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.bootcss.com/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.bootcss.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+<script>
+    function select_chat() {
+        console.log('chat')
+        window.location.href=('/chat')
+    }
+
+    function select_game() {
+        console.log('game')
+        window.location.href=('/game')
+    }
+</script>
+</body>
+
+</html>

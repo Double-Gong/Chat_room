@@ -1,0 +1,141 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>匿名聊天室</title>
+    <script src="{{ url_for('anonymous_room.static', filename='semantic-ui/semantic.min.js') }}"></script>
+    <script src="{{ url_for('anonymous_room.static', filename='js/socket.io.min.js') }}"></script>
+    <script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.slim.min.js"
+            integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+            crossorigin="anonymous"></script>
+
+</head>
+<body>
+<h1>匿名聊天室</h1>
+<p>当前用户IP: <b id="ip_address"></b></p>
+<h2 style="display: block">
+    Send to:
+    <select name="room_select" id="room_select" style="width: 117px;height: 22px"></select>
+    <input type="text" name="room_create" hidden="hidden" id="room_create" placeholder="请输入房间名称">
+    <button name="btn_create_room" id="btn_create_room" hidden="hidden">创建房间</button>
+    <input type="text" name="join_room" hidden="hidden" id="join_room" placeholder="请输入房间id">
+    <button name="btn_join_room" id="btn_join_room" hidden="hidden">加入房间</button>
+</h2>
+
+
+<form id="emit" method="POST" action='#'>
+    <div>
+        <input type="text" name="emit_data" id="emit_data" placeholder="Message">
+        <input type="submit" value="发送">
+    </div>
+</form>
+<h2>Receive:</h2>
+<div id="log"></div>
+</body>
+<script type="text/javascript" charset="utf-8">
+    namespace = '/anonymous_chat';
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+    $(document).ready(function () {
+        socket.on('connect', function () {
+            socket.emit('on_connect');
+        });
+
+        socket.on('room_select', function (msg) {
+            $('#room_select option').remove()
+            $('#room_select').append(msg.room_list);
+            $('#ip_address').html(msg.ip_address)
+            $('#log')[0].innerHTML = ''
+        })
+        socket.on('msg_show', function (msg) {
+            $('#log').html('')
+            $('#log').append($('<div/>').html(msg.msg));
+        });
+        socket.on('recieve_msg', function (msg) {
+
+            $('#log').append($('<div>').html('<br>'+'Received # ' + msg.user + ': ' + msg.data));
+
+        })
+        socket.on('join_new_room', function (msg) {
+            if (msg['status'] == 'success') {
+                $('#join_room').val('')
+                $('#room_create').val('')
+                $('#join_room').hide()
+                $('#btn_join_room').hide()
+                $('#room_create').hide()
+                $('#btn_create_room').hide()
+                $('#room_select option')[0].innerText = msg['new_room_name']
+                $('#room_select option')[0].value = msg['new_room_id']
+                $('#room_select').prepend('<option></option>')
+                $('#room_select option')[1].selected = true
+                socket.emit('room_confirm', {'room': msg['new_room_name'], 'room_id': msg['new_room_id']})
+            } else if (msg['status'] == 'fail') {
+                alert(msg['msg'])
+            }
+        })
+        socket.on('alert_msg', function (msg) {
+            alert(msg['msg'])
+        })
+        $('form#emit').submit(function () {
+            var msg = $('#emit_data').val()
+            var room_id = $('#room_select option:selected').val()
+            if (room_id == '') {
+                alert('请选择房间')
+            } else {
+                if (msg == '') {
+                    alert('请输入要发送的信息')
+                } else {
+                    socket.emit('send_message', {
+                        'msg': msg,
+                        'room_id': room_id,
+                    });
+                    $('#log').append('<br>'+  $('<div/>').text('# I say: ' + msg).html());
+                    $('#emit_data').val('')
+                }
+            }
+            return false
+        });
+
+        $('#room_select').change(function () {
+            var room_name = $('#room_select option:selected').text()
+            var room_id = $('#room_select option:selected').val()
+            $('#room_create').hide()
+            $('#btn_create_room').hide()
+            $('#join_room').hide()
+            $('#btn_join_room').hide()
+            if (room_name == '新建房间') {
+                $('#room_create').show()
+                $('#btn_create_room').show()
+            } else if (room_name == '') {
+                alert('未选中房间');
+            } else if (room_name == '加入房间') {
+                $('#join_room').show()
+                $('#btn_join_room').show()
+            } else {
+                socket.emit('room_confirm', {'room': room_name, 'room_id': room_id})
+            }
+        })
+
+        $('#btn_create_room').click(function () {
+            var new_room = $('#room_create').val()
+            var select_options = $('#room_select option').map(function () {
+                return $(this).text()
+            }).get()
+            if (select_options.includes(new_room)) {
+                alert('房间已经存在')
+            } else {
+                socket.emit('room_create', {room: new_room});
+            }
+        });
+
+        $('#btn_join_room').click(function () {
+            var join_room = $('#join_room').val()
+            socket.emit('join_new_room', {room_id: join_room});
+        });
+    });
+    window.onbeforeunload = on_close
+
+    function on_close() {
+        socket.emit('on_disconnect');
+        socket.disconnect();
+    }
+</script>
+</html>

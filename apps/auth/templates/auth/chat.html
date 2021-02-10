@@ -1,0 +1,456 @@
+<html>
+<head>
+
+    <title>聊天室</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{{ url_for('static', filename='dog.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='semantic-ui/semantic.min.css') }}">
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="//code.z01.com/v4/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//code.z01.com/v4/dist/css/zico.min.css">
+
+    <style>
+
+        .box-shadow {
+            box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, .05);
+        }
+
+        .chat_area {
+            height: 68%;
+            margin: 2%;
+            background: #b4d95c;
+            overflow: hidden;
+            overflow-y: scroll;
+            overflow-y: visible;
+        }
+
+
+        .inputarea {
+        {#position: relative;#}{#bottom: 10%;#}{#left: 0;#} height: auto;
+            width: auto;
+            background: #f6f6f6;
+            color: #a1a1a1;
+            padding: 10px;
+            margin: 2%;
+        }
+
+        .message-body {
+            display: block;
+            padding-top: 5px;
+            font-size: 14px;
+            color: #222;
+        }
+
+
+        .msg-box .picture {
+            float: left;
+            width: 50px;
+            display: block;
+            padding-right: 15px;
+            margin-right: 10px;
+        }
+
+        .ellipsis-icon {
+            position: absolute;
+            display: inline-block;
+            visibility: hidden;
+            vertical-align: top;
+        }
+
+        .profile-card {
+            max-width: 220px;
+        }
+
+        .nickname {
+            color: #555;
+            font-weight: bold;
+        }
+
+
+        .msg-box:hover > .ellipsis-icon {
+            visibility: visible;
+        }
+
+        .picture img {
+            width: 45px;
+            height: 45px;
+            border-radius: 5px;
+        }
+
+        .msg {
+            background: #ECECEC;
+            display: inline-block;
+            padding: 12px;
+            width: auto;
+            max-width: 80%;
+            border-radius: 2px;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, .04);
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .msg img {
+            width: 100%;
+            max-width: 1000px;
+            height: auto;
+        }
+
+        .msg:before {
+            content: "";
+            position: absolute;
+            display: block;
+            left: 0;
+            border-right: 6px solid #ECECEC;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            top: 10px;
+            margin-left: -6px;
+        }
+
+        .room_single_name {
+            float: left;
+            width: 80%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .message-count {
+            float: right
+        }
+
+        .btn-room {
+            text-align: left
+        }
+
+        .msg_send, .msg_receive {
+            width: 60%;
+            padding: 10px 10px;
+        }
+
+        .msg_send div, .msg_receive div {
+            width: 88%;
+            display: inline-block;
+        }
+
+        .msg_send span, .msg_receive span {
+            background: white;
+            padding: 5px;
+            border-radius: 5px;
+            min-width: 5%;
+            width: auto;
+            margin: 10px;
+            display: inline-block;
+
+        }
+
+        .msg_send span, .msg_send, .msg_send img {
+            float: right;
+        }
+
+        .msg_receive span, .msg_receive img, .msg_receive {
+            float: left;
+        }
+
+        .msg_send img, .msg_receive img {
+            width: 10%;
+            height: auto;
+            margin: auto 1%;
+            display: inline-block;
+        }
+
+        #list_group button {
+            border: #96c8da;
+            border-style: solid;
+            border-width: 1px;
+        }
+
+        .operate-input {
+            width: 50%;
+            display: inline-block
+        }
+
+        .label-for-opreate {
+            display: inline-block
+        }
+    </style>
+</head>
+<body>
+
+<!--头-->
+<div class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom box-shadow">
+    <img src="{{ url_for('static', filename='dog.png') }}" width="50px" height="50px">
+    <h5 class=" ml-4 my-0 mr-md-4 font-weight-normal">聊天室</h5>
+    <div class="ml-4 my-0 mr-md-auto">
+        <select class="btn btn-default" id="room_way">
+            <option value="0" disabled selected style="display: none">选择房间模式</option>
+            <option value="1">匿名登陆</option>
+            <option value="2">实名登陆</option>
+        </select>
+    </div>
+
+    <nav class="my-2 my-md-0 mr-md-3">
+        <a class="p-2 text-dark" href="/">
+            {% if current_user.is_authenticated %}
+                Hi {{ current_user.username }}!
+            {% endif %}
+        </a>
+    </nav>
+    <a class="btn btn-outline-primary" href="{{ url_for('auth.logout') }}">logout</a>
+</div>
+
+<!--消息-->
+<div id="message_container" style="margin-bottom: 2%" class="container bg-light mt-2 mb-0 box-shadow">
+    <div class="row pb-1" style="height: 80%">
+        <div class="col-3">
+            <div class="mt-3 mb-3" style="text-align: center">
+                <button type="button" class="btn btn-secondary" id="rooms" disabled>房间列表</button>
+                <button type="button" id="btn_test" class="btn btn-primary tooltip-toggle" data-toggle="modal"
+                        title="选择房间操作" data-target="#myModal" disabled>
+                    +
+                </button>
+
+                <!-- 模态框 -->
+                <div class="modal fade" id="myModal">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-body">
+                                <div>
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+                                <div>
+                                    <div>
+                                        <select class="btn btn-default" id="room_select">
+                                            {#                                            <option value="0" disabled selected style="display: none">选择房间操作</option>#}
+                                            <option value="1">加入房间</option>
+                                            <option value="2">创建房间</option>
+                                        </select>
+                                    </div>
+                                    <div class="card-body">
+                                        <form action="javascript:test_form()" name="room_data" id="room_data">
+                                            <div style="height: 50px">
+                                                <div class="form-group" id="select_room">
+                                                    <label for="room_id" class="label-for-opreate">房间号：</label>
+                                                    <input type="text" class="form-control operate-input" id="room_id"
+                                                           name="room_id" placeholder="请输入房间号">
+                                                </div>
+                                                <div class="form-group" id="create_room" style="display: none">
+                                                    <label for="room_name" class="label-for-opreate">房间名：</label>
+                                                    <input type="text" class="form-control operate-input" id="room_name"
+                                                           name="room_name" placeholder="请输入房间名称">
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <input class="btn btn-primary" type="submit" value="提交">
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="list-group" id="list_group" name="list_group">
+            </div>
+        </div>
+        <div class="col-9" style="background: #999999">
+            <div style="text-align: center;margin: 2%;">
+                <h3 id="room_name">&nbsp;</h3>
+            </div>
+            <div class="chat_area" id="chat_area">
+                {#信息主体#}
+            </div>
+            <div class="inputarea">
+
+                <div style="width: 100%">
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">请输入内容</span>
+                        </div>
+                        <textarea id="text_area" class="form-control" aria-label="请输入内容" disabled></textarea>
+                        <button class=" ml-2 btn btn-lg btn-primary" id="send_button" disabled>发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--输入框-->
+
+
+{#<script src="{{ url_for('static', filename='semantic-ui/semantic.min.js') }}"></script>#}
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+<script src="https://cdn.bootcss.com/jquery/3.2.1/jquery.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.bootcss.com/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.bootcss.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+<script>
+    $(document).ready(function () {
+        $('.tooltip-toggle').tooltip();
+    });
+    socket = io('', {autoConnect: false, reconnect: false, forceNew: true})
+    $('#room_way').change(function () {
+        {#socket.#}
+        socket_disconnect()
+        if ($('#room_way option:selected').text() == '匿名登陆') {
+            namespace = '/anonymous_chat';
+            user_target = '匿名用户{{ current_user.id }}'
+        } else {
+            namespace = '/realname_chat';
+            user_target = '{{ current_user.username }}'
+        }
+        socket = io(namespace, {forceNew: true, reconnectionAttempts: 10, reconnectionDelay: 5000})
+
+        $('#text_area')[0].disabled = true
+        $('#send_button')[0].disabled = true
+        $('#btn_test')[0].disabled = false
+        $('#chat_area').html('')
+
+        function socket_disconnect() {
+            console.log('connected', socket.connected)
+            console.log('disconnected', socket.disconnected)
+            if (socket.connected) {
+                socket.disconnect()
+            }
+        }
+
+
+        socket.on('reconnect_failed', () => {
+            window.location.href=("{{ url_for('auth.login') }}")
+        })
+
+        socket.on('on_alert_message', (data) => {
+            alert(data.msg)
+        })
+        socket.on('on_rooms', (data) => {
+            $('#list_group').html('')
+            for (i in data.room_list) {
+                var room_single = '<button class="list-group-item list-group-item-action btn-room" value="' + data.room_list[i].room_id + '"><span class="room_single_name">' + data.room_list[i].room_name + '</span><span class="badge badge-pill badge-info message-count">' + data.room_list[i].message_count + '</span></button>'
+                $('#list_group').append(room_single)
+            }
+        })
+        socket.on('join_new_room', (data) => {
+            console.log(data)
+            var room_single = '<button class="list-group-item list-group-item-action btn-room" value="' + data.room_id + '"><span class="room_single_name">' + data.room_name + '</span><span class="badge badge-pill badge-info message-count">' + data.message_count + '</span></button>'
+            $('#list_group').prepend(room_single)
+        })
+
+        socket.on('on_show_message', (data) => {
+            $('#chat_area').html('')
+            for (i in data.msg_list) {
+                if (data.msg_list[i].author == user_target) {
+                    var content = '<div class="msg_send"><div><span>' + data.msg_list[i].message + '</span></div><img src="{{ url_for("static", filename="dog.png") }}" alt="' + data.msg_list[i].author + '" class="rounded" title="' + data.msg_list[i].author + '"></div>'
+                    $('#chat_area').append(content)
+                } else {
+                    var content = '<div class="msg_receive"><img src="{{ url_for("static", filename="dog.png") }}" alt="' + data.msg_list[i].author + '" class="rounded" title="' + data.msg_list[i].author + '"><div><span>' + data.msg_list[i].message + '</span></div></div>'
+                    $('#chat_area').append(content)
+                }
+            }
+            $("h3#room_name").text(data.room_name)
+            $('#chat_area')[0].scrollTop = $('#chat_area')[0].scrollHeight;
+        })
+
+        socket.on('on_receive_message', function (data) {
+            console.log('on_receive_message', data)
+            current_room = $('#list_group button.active')[0]
+            if ((current_room) && (current_room.getAttribute('value') == data.room_id)) {
+                var content = '<div class="msg_receive"><div><span>' + data.message + '</span></div><img src="{{ url_for("static", filename="dog.png") }}" alt="' + data.author + '" class="rounded" title="' + data.author + '"></div>'
+                $('#chat_area').append(content)
+                socket.emit('message_confirm', {status: 'received', room_id: current_room.getAttribute('value')})
+            } else {
+                target_room = $('#list_group [value=' + data.room_id + '] .badge-pill')
+                target_room.text(Number(target_room.text()) + 1)
+            }
+        })
+    });
+
+    $(document).on('click', '#list_group button', function () {
+        console.log('我看看room_click')
+        if (!this.classList.contains('active')) {
+            $('#list_group button').removeClass('active')
+            this.classList.add("active")
+            var room_id = this.getAttribute('value')
+            $(this).children('.badge-pill').text(0)
+            $('#text_area')[0].disabled = false
+            $('#send_button')[0].disabled = false
+            socket.emit('click_room', {room_id: room_id})
+            socket.emit('message_confirm', {status: 'received', room_id: room_id})
+        }
+    })
+
+
+    function test_form() {
+        var room_op = $('#room_select option:selected').text()
+        if (room_op == '创建房间') {
+            var new_room = document.getElementsByName('room_name')[0]
+            console.log(typeof (new_room.value))
+            if (new_room.value) {
+                socket.emit('room_create', {'room_name': new_room.value});
+            } else {
+                new_room.value = ''
+                new_room.setAttribute('placeholder', '请输入房间名称！！！')
+                return
+            }
+        } else if (room_op == '加入房间') {
+            var room_id = document.getElementsByName('room_id')[0]
+            if (room_id.value) {
+                if (isNaN(room_id.value)) {
+                    room_id.value = ''
+                    room_id.setAttribute('placeholder', '请输入正确的房间id！！！')
+                    return;
+                }
+                socket.emit('room_select', {'room_id': room_id.value});
+            } else {
+                room_id.value = ''
+                room_id.setAttribute('placeholder', '请输入房间id！！！')
+                return
+            }
+        } else {
+            $('#select_room').hide()
+            $('#create_room').hide()
+        }
+        $('#room_data input').not(':submit').val('')
+        $('#myModal').modal('hide');
+    }
+
+    $('#room_select').change(function () {
+        var room_op = $('#room_select option:selected').text()
+        if (room_op == '创建房间') {
+            $('#create_room').show()
+            $('#select_room').hide()
+        } else if (room_op == '加入房间') {
+            $('#select_room').show()
+            $('#create_room').hide()
+        } else {
+            $('#select_room').hide()
+            $('#create_room').hide()
+        }
+    })
+
+    $("#send_button").click(() => {
+        var message = $("#text_area").val()
+        $("#text_area").val('')
+
+        if (message.trim(' ') == '') {
+            $("#text_area")[0].setAttribute('placeholder', '无法发送空信息')
+            return
+        }
+        var room_id = $('#list_group button.active')[0].getAttribute('value')
+        socket.emit('send_message', {'message': message, 'room_id': room_id})
+        var content = '<div class="msg_send"><div><span>' + message + '</span></div><img src="{{ url_for("static", filename="dog.png") }}" alt="' + user_target + '" class="rounded" title="' + user_target + '"></div>'
+        $('#chat_area').append(content)
+        $('#chat_area')[0].scrollTop = $('#chat_area')[0].scrollHeight;
+    })
+</script>
+</body>
+</html>
